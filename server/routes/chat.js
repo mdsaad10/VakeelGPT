@@ -25,20 +25,43 @@ router.get('/history/:userId', async (req, res) => {
     const { userId } = req.params;
     const { limit = 50, offset = 0 } = req.query;
 
-    const result = await pool.query(
-      `SELECT c.*, cs.title as session_title 
-       FROM chats c 
-       LEFT JOIN chat_sessions cs ON c.session_id = cs.id 
-       WHERE c.user_id = $1 
-       ORDER BY c.timestamp DESC 
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
-    );
+    let chats = [];
+    let total = 0;
+
+    if (pool) {
+      const result = await pool.query(
+        `SELECT c.*, cs.title as session_title 
+         FROM chats c 
+         LEFT JOIN chat_sessions cs ON c.session_id = cs.id 
+         WHERE c.user_id = $1 
+         ORDER BY c.timestamp DESC 
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      );
+      chats = result.rows;
+      total = result.rowCount;
+    } else {
+      // Mock mode
+      const userChats = mockData.chats
+        .filter(chat => chat.user_id === userId)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      total = userChats.length;
+      chats = userChats
+        .slice(parseInt(offset), parseInt(offset) + parseInt(limit))
+        .map(chat => {
+          const session = mockData.sessions.find(s => s.id === chat.session_id);
+          return {
+            ...chat,
+            session_title: session ? session.title : 'Chat Session'
+          };
+        });
+    }
 
     res.json({
       success: true,
-      chats: result.rows,
-      total: result.rowCount
+      chats,
+      total
     });
   } catch (error) {
     console.error('Error fetching chat history:', error);
@@ -51,19 +74,36 @@ router.get('/sessions/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const result = await pool.query(
-      `SELECT cs.*, COUNT(c.id) as message_count
-       FROM chat_sessions cs
-       LEFT JOIN chats c ON cs.id = c.session_id
-       WHERE cs.user_id = $1
-       GROUP BY cs.id
-       ORDER BY cs.updated_at DESC`,
-      [userId]
-    );
+    let sessions = [];
+
+    if (pool) {
+      const result = await pool.query(
+        `SELECT cs.*, COUNT(c.id) as message_count
+         FROM chat_sessions cs
+         LEFT JOIN chats c ON cs.id = c.session_id
+         WHERE cs.user_id = $1
+         GROUP BY cs.id
+         ORDER BY cs.updated_at DESC`,
+        [userId]
+      );
+      sessions = result.rows;
+    } else {
+      // Mock mode
+      sessions = mockData.sessions
+        .filter(session => session.user_id === userId)
+        .map(session => {
+          const messageCount = mockData.chats.filter(chat => chat.session_id === session.id).length;
+          return {
+            ...session,
+            message_count: messageCount
+          };
+        })
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    }
 
     res.json({
       success: true,
-      sessions: result.rows
+      sessions
     });
   } catch (error) {
     console.error('Error fetching chat sessions:', error);
@@ -77,10 +117,23 @@ router.post('/sessions', async (req, res) => {
     const { userId, title } = req.body;
     const sessionId = uuidv4();
 
-    await pool.query(
-      'INSERT INTO chat_sessions (id, user_id, title) VALUES ($1, $2, $3)',
-      [sessionId, userId, title || 'New Conversation']
-    );
+    const sessionData = {
+      id: sessionId,
+      user_id: userId,
+      title: title || 'New Conversation',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (pool) {
+      await pool.query(
+        'INSERT INTO chat_sessions (id, user_id, title) VALUES ($1, $2, $3)',
+        [sessionId, userId, sessionData.title]
+      );
+    } else {
+      // Mock mode
+      mockData.sessions.push(sessionData);
+    }
 
     res.json({
       success: true,

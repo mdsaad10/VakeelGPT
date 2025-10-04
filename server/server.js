@@ -20,6 +20,8 @@ const chatRoutes = require('./routes/chat');
 const documentRoutes = require('./routes/documents');
 const userRoutes = require('./routes/users');
 
+console.log('📁 Routes imported successfully');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -33,6 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  console.log('🏥 Health check requested');
   res.json({ 
     status: 'ok', 
     service: 'VakeelGPT API',
@@ -61,10 +64,19 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 VakeelGPT Server running on port ${PORT}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+});
+
+// Global error handlers
+process.on('uncaughtException', (error) => {
+  console.error('🚨 Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Graceful shutdown

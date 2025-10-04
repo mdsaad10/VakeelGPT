@@ -1,0 +1,11 @@
+{
+  "watch": ["server/"],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/",
+    ".next/",
+    "*.log",
+    ".env*"
+  ],
+  "delay": "2500"
+}

@@ -5,37 +5,84 @@ const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
+// Mock data for when database is unavailable
+const mockData = {
+  documents: [
+    {
+      id: 'mock-doc-1',
+      user_id: 'demo-user',
+      title: 'Sample Legal Contract',
+      type: 'contract',
+      content: 'This is a sample legal contract created to demonstrate VakeelGPT capabilities...',
+      status: 'completed',
+      language: 'en',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'mock-doc-2',
+      user_id: 'demo-user',
+      title: 'Privacy Policy Draft',
+      type: 'policy',
+      content: 'Sample privacy policy document for demonstration purposes...',
+      status: 'draft',
+      language: 'en',
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date(Date.now() - 86400000).toISOString()
+    }
+  ]
+};
+
 // Get all documents for a user
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { type, status, limit = 20, offset = 0 } = req.query;
 
-    let query = 'SELECT * FROM documents WHERE user_id = $1';
-    let params = [userId];
-    let paramCount = 1;
+    let documents = [];
+    let total = 0;
 
-    if (type) {
-      paramCount++;
-      query += ` AND type = $${paramCount}`;
-      params.push(type);
+    if (pool) {
+      let query = 'SELECT * FROM documents WHERE user_id = $1';
+      let params = [userId];
+      let paramCount = 1;
+
+      if (type) {
+        paramCount++;
+        query += ` AND type = $${paramCount}`;
+        params.push(type);
+      }
+
+      if (status) {
+        paramCount++;
+        query += ` AND status = $${paramCount}`;
+        params.push(status);
+      }
+
+      query += ` ORDER BY created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+      params.push(limit, offset);
+
+      const result = await pool.query(query, params);
+      documents = result.rows;
+      total = result.rowCount;
+    } else {
+      // Mock mode
+      const userDocs = mockData.documents
+        .filter(doc => {
+          if (doc.user_id !== userId) return false;
+          if (type && doc.type !== type) return false;
+          if (status && doc.status !== status) return false;
+          return true;
+        });
+      
+      total = userDocs.length;
+      documents = userDocs.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
     }
-
-    if (status) {
-      paramCount++;
-      query += ` AND status = $${paramCount}`;
-      params.push(status);
-    }
-
-    query += ` ORDER BY created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
 
     res.json({
       success: true,
-      documents: result.rows,
-      total: result.rowCount
+      documents,
+      total
     });
   } catch (error) {
     console.error('Error fetching documents:', error);
@@ -76,13 +123,30 @@ router.post('/draft', async (req, res) => {
       documentContent = await gradientAI.generateDocumentTemplate(type, language, customFields);
     }
 
-    // Store document in database
+    // Store document
     const documentId = uuidv4();
-    await pool.query(
-      `INSERT INTO documents (id, user_id, title, type, content, language, status) 
-       VALUES ($1, $2, $3, $4, $5, $6, 'draft')`,
-      [documentId, userId, title, type, documentContent, language]
-    );
+    const documentData = {
+      id: documentId,
+      user_id: userId,
+      title,
+      type,
+      content: documentContent,
+      language,
+      status: 'draft',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (pool) {
+      await pool.query(
+        `INSERT INTO documents (id, user_id, title, type, content, language, status) 
+         VALUES ($1, $2, $3, $4, $5, $6, 'draft')`,
+        [documentId, userId, title, type, documentContent, language]
+      );
+    } else {
+      // Mock mode
+      mockData.documents.push(documentData);
+    }
 
     res.json({
       success: true,
