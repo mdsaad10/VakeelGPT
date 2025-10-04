@@ -1,0 +1,49 @@
+# VakeelGPT v2.0 - Node.js Dependencies
+# This file lists the system requirements for VakeelGPT
+
+# Node.js Version Requirement
+# Minimum: Node.js 18.x
+# Recommended: Node.js 20.x LTS
+
+# System Requirements
+# Operating System: Windows 10+, macOS 10.15+, Ubuntu 18.04+
+# RAM: Minimum 4GB, Recommended 8GB+
+# Storage: Minimum 2GB free space
+# Network: Stable internet connection for AI API calls
+
+# Required Software
+# Node.js >= 18.0.0
+# npm >= 8.0.0 (comes with Node.js)
+# PostgreSQL >= 12.0 (or DigitalOcean Managed Database)
+# Git >= 2.20.0
+
+# Optional but Recommended
+# PM2 for production process management
+# Docker for containerized deployment
+# VS Code with recommended extensions
+
+# Environment Variables Required:
+# DATABASE_URL - PostgreSQL connection string
+# GRADIENT_AI_API_KEY - DigitalOcean Gradient AI API key
+# JWT_SECRET - Secret key for JWT tokens
+# NODE_ENV - Environment (development/production)
+# PORT - Server port (default: 3001)
+
+# DigitalOcean Services Required:
+# - Gradient AI API access
+# - Managed PostgreSQL Database (recommended)
+# - App Platform (for deployment)
+# - Spaces (optional, for file storage)
+
+# Installation Command:
+# npm install
+
+# Setup Command:
+# npm run setup
+
+# Development Command:
+# npm run dev
+
+# Production Commands:
+# npm run build
+# npm start

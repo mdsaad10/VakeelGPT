@@ -1,0 +1,33 @@
+# Environment configuration for VakeelGPT v2.0
+name: vakeelgpt
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Node.js environment
+  - nodejs>=18.0
+  - npm>=8.0
+  
+  # System dependencies
+  - postgresql>=12
+  - git
+  - curl
+  - wget
+  
+  # Development tools
+  - python>=3.8  # For some build tools
+  - make
+  - gcc
+  
+  # Optional development tools
+  - pip:
+    - pre-commit  # For git hooks
+    - black       # Python code formatting
+    - flake8      # Python linting
+
+# Usage:
+# conda env create -f environment.yml
+# conda activate vakeelgpt
+# npm install
+# npm run setup

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  vakeelgpt-app:
+    build: .
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - GRADIENT_AI_API_KEY=${GRADIENT_AI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - postgres
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - vakeelgpt-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=vakeelgpt_db
+      - POSTGRES_USER=${DB_USER:-vakeelgpt}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - vakeelgpt-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - vakeelgpt-app
+    restart: unless-stopped
+    networks:
+      - vakeelgpt-network
+
+volumes:
+  postgres_data:
+
+networks:
+  vakeelgpt-network:
+    driver: bridge
